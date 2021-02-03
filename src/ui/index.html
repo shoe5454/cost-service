@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <title>Cost Service</title>
+    <meta charset="UTF-8">
+    <!--<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>-->
+    <script src="amazon-cognito-auth-js/1.3.3/amazon-cognito-auth.min.js"></script>
+</head>
+
+<body onload="onLoad()">
+    <div id="quoteForm" style="display: none">
+        <h1>Calculate cost</h1>
+        <form onsubmit="calculateCost(event, this)">
+            <div>
+                <label for="industry">Industry</label>
+                <input name="industry" type="text" id="industry" required />
+            </div>
+            <div>
+                <label for="monthly_transactions">Estimated number of monthly transactions</label>
+                <input name="monthly_transactions" type="text" id="monthly_transactions" required />
+            </div>
+            <div>
+                <label for="monthly_volume">Estimated monthly transaction volume ($)</label>
+                <input name="monthly_volume" type="text" id="monthly_volume" required />
+            </div>
+            <div>
+                <button type="submit">Calculate cost</button>
+            </div>
+        </form>
+    </div>
+
+    <div><br></div>
+
+    <div id="uploadCostsForm" style="display: none">
+        <h1>Upload costs CSV</h1>
+    </div>
+
+    <div><br></div>
+
+    <div>
+        <a id="signOutButton" href="javascript:void(0)" title="Sign out">Sign Out</a>
+        <!--<div>
+            <h2>Tokens</h2>
+            <div>
+                <pre id="idtoken"> ... </pre>
+                <pre id="acctoken"> ... </pre>
+                <pre id="reftoken"> ... </pre>
+            </div>
+        </div>-->
+    </div>
+    <script>
+        var apiUrl = '${DEPLOYMENT_API_URL}';
+        var auth = null;
+
+        // Operations when the web page is loaded.
+        function onLoad() {
+            // Initiatlize CognitoAuth object
+            initCognitoSDK();
+            // Attach event handler to sign out button
+            document.getElementById("signOutButton").addEventListener("click", function () {
+                auth.signOut();
+            });
+            var curUrl = window.location.href;
+            auth.parseCognitoWebResponse(curUrl);
+
+            if (auth.getUsername()) { // Signed in
+                // Show appropriate blocks according to role/group
+                var session = auth.getSignInUserSession();
+                var accToken = session.getAccessToken().decodePayload();
+                if (accToken['cognito:groups']?.includes('sales_rep') || accToken['cognito:groups']?.includes('costs_admin'))
+                    document.getElementById("quoteForm").style.display = 'block';
+                if (accToken['cognito:groups']?.includes('costs_admin'))
+                    document.getElementById("uploadCostsForm").style.display = 'block';
+            } else { // Not signed in
+                // Redirect to hosted sign in UI
+                auth.getSession();
+            }
+        }
+
+        function calculateCost(e, form) {
+            e.preventDefault();
+
+            var token = auth.getSignInUserSession().getIdToken().getJwtToken();
+            fetch(`${apiUrl}costs/${form.industry.value}/${form.monthly_transactions.value}/${form.monthly_volume.value}`, {
+                method: 'get',
+                headers: {
+                    Authorization: token
+                },
+            }).then(function (response) {
+                return response.json();
+            }).then(function (data) {
+                //Success code goes here
+                alert('form submited');
+            }).catch(function (err) {
+                //Failure
+                alert('Error ' + err);
+            });
+        }
+
+        // Operations when signed in.
+        /*function showSignedIn(session) {
+            if (session) {
+                var idToken = session.getIdToken();
+                if (idToken) {
+                    var payload = idToken.decodePayload();
+                    var formatted = JSON.stringify(payload, undefined, 2);
+                    document.getElementById('idtoken').innerHTML = formatted;
+                }
+                var accToken = session.getAccessToken();
+                if (accToken) {
+                    var payload = accToken.decodePayload();
+                    var formatted = JSON.stringify(payload, undefined, 2);
+                    document.getElementById('acctoken').innerHTML = formatted;
+                }
+                var refToken = session.getRefreshToken().getToken();
+                if (refToken) {
+                    document.getElementById('reftoken').innerHTML = refToken.substring(1, 20);
+                }
+            }
+        }*/
+
+        // Initialize a cognito auth object.
+        function initCognitoSDK() {
+            var authData = {
+                ClientId: '${DEPLOYMENT_COGNITO_CLIENT_ID}', // Your client id here
+                AppWebDomain: '${DEPLOYMENT_COGNITO_DOMAIN}', // Exclude the "https://" part. 
+                TokenScopesArray: ['openid', 'email', 'phone', 'profile'],
+                RedirectUriSignIn: '${DEPLOYMENT_FRONTEND_URL}',
+                RedirectUriSignOut: '${DEPLOYMENT_FRONTEND_URL}',
+                //IdentityProvider : '<TODO: your identity provider you want to specify here>', 
+                UserPoolId: '${DEPLOYMENT_COGNITO_USER_POOL_ID}',
+                AdvancedSecurityDataCollectionFlag: false
+            };
+            auth = new AmazonCognitoIdentity.CognitoAuth(authData);
+            // You can also set state parameter 
+            // auth.setState(<state parameter>);  
+            auth.userhandler = {
+                onSuccess: function (result) {
+                    //showSignedIn(result);
+                },
+                onFailure: function (err) {
+                    alert("Error! " + err);
+                }
+            };
+            // The default response_type is "token", uncomment the next line will make it be "code".
+            // auth.useCodeGrantFlow();
+        }
+    </script>
+</body>
+
+</html>

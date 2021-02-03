@@ -1,0 +1,285 @@
+# This is the SAM template that represents the architecture of your serverless application
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-template-basics.html
+
+# The AWSTemplateFormatVersion identifies the capabilities of the template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/format-version-structure.html
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  cost-service
+
+  Coding challenge for a certain company
+
+# Transform section specifies one or more macros that AWS CloudFormation uses to process your template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-section-structure.html
+Transform:
+  - AWS::Serverless-2016-10-31
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  # Each Lambda function is defined by properties:
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+
+  # This is a Lambda function config associated with the source code: get-all-items.js
+  getAllItemsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/get-all-items.getAllItemsHandler
+      Runtime: nodejs12.x
+      MemorySize: 128
+      Timeout: 100
+      Description: A simple example includes a HTTP get method to get all items from a DynamoDB table.
+      Policies:
+        # Give Create/Read/Update/Delete Permissions to the CostsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CostsTable
+      Environment:
+        Variables:
+          # Make table name accessible as environment variable from function code during execution
+          COSTS_TABLE: !Ref CostsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+  # Each Lambda function is defined by properties:
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+
+  # This is a Lambda function config associated with the source code: calculate-cost.js
+  calculateCostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/calculate-cost.handler
+      Runtime: nodejs12.x
+      MemorySize: 128
+      Timeout: 100
+      Description: A simple example includes a HTTP get method to get one item by id from a DynamoDB table.
+      Policies:
+        # Give Create/Read/Update/Delete Permissions to the CostsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CostsTable
+      Environment:
+        Variables:
+          # Make table name accessible as environment variable from function code during execution
+          COSTS_TABLE: !Ref CostsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /costs/{industry}/{monthly_transactions}/{monthly_volume}
+            Method: GET
+  # Each Lambda function is defined by properties:
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+
+  # This is a Lambda function config associated with the source code: put-item.js
+  putItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/put-item.putItemHandler
+      Runtime: nodejs12.x
+      MemorySize: 128
+      Timeout: 100
+      Description: A simple example includes a HTTP post method to add one item to a DynamoDB table.
+      Policies:
+        # Give Create/Read/Update/Delete Permissions to the CostsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CostsTable
+      Environment:
+        Variables:
+          # Make table name accessible as environment variable from function code during execution
+          COSTS_TABLE: !Ref CostsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /
+            Method: POST
+  # Simple syntax to create a DynamoDB table with a single attribute primary key, more in
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlesssimpletable
+
+  # DynamoDB table to store cost data: {id: &lt;ID&gt;, name: &lt;NAME&gt;}
+  CostsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+
+  # Cognito user pool
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Ref AWS::StackName
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+      Schema:
+        - AttributeDataType: String
+          Name: email
+          Required: false
+
+  # Cognito user pool client
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      ClientName: !Ref AWS::StackName
+      GenerateSecret: false
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - !Sub "https://${CloudFrontDistribution.DomainName}"
+      LogoutURLs:
+        - !Sub "https://${CloudFrontDistribution.DomainName}"
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - phone
+        - email
+        - openid
+        - profile
+
+  # Cognito user pool domain
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub "${AWS::StackName}-${AWS::AccountId}"
+      UserPoolId: !Ref CognitoUserPool
+
+  # Predefined groups used to authorize users
+  CognitoSalesRepGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      Description: "External sales rep"
+      GroupName: "sales_rep"
+      UserPoolId: !Ref CognitoUserPool
+  CognitoCostsAdminGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      Description: "Administrator who can set cost parameters"
+      GroupName: "costs_admin"
+      UserPoolId: !Ref CognitoUserPool
+
+  # The S3 bucket that will host the frontend code
+  FrontendS3Bucket:
+    Type: AWS::S3::Bucket
+
+  # Restrict access to cloudfront only
+  FrontendS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendS3Bucket
+      PolicyDocument:
+        Id: frontend-policy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Action: "s3:GetObject"
+            Resource:
+              - !Sub "arn:aws:s3:::${FrontendS3Bucket}/*"
+            Principal:
+              AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginAccessIdentity}"
+
+  # Nested stack to deploy front end to S3 (see https://serverless.pub/deploy-frontend-to-s3-and-sar/)
+  FrontendDeploymentLayer:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location:
+        ApplicationId: arn:aws:serverlessrepo:us-east-1:375983427419:applications/deploy-to-s3
+        SemanticVersion: 2.4.2
+
+  # Defines the location of the frontend code to deploy to S3. Uses FrontendDeploymentLayer
+  FrontendSource:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !GetAtt FrontendDeploymentLayer.Outputs.Arn
+      CodeUri: src/ui/
+      AutoPublishAlias: live
+      Runtime: python3.6
+      Handler: deployer.resource_handler
+      Timeout: 180
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref FrontendS3Bucket
+
+  # Triggers the upload of the frontend code to S3 during deployment. See FrontendDeploymentLayer and FrontendSource
+  FrontendDeploymentResource:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt FrontendSource.Arn
+      Version: !Ref "FrontendSource.Version"
+      TargetBucket: !Ref FrontendS3Bucket
+      Acl: "private"
+      CacheControlMaxAge: 600
+      Substitutions:
+        FilePattern: "*.html"
+        Values:
+          DEPLOYMENT_COGNITO_CLIENT_ID: !Ref CognitoUserPoolClient
+          DEPLOYMENT_COGNITO_USER_POOL_ID: !Ref CognitoUserPool
+          DEPLOYMENT_COGNITO_DOMAIN: !Sub "${CognitoUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com"
+          DEPLOYMENT_FRONTEND_URL: !Sub "https://${CloudFrontDistribution.DomainName}"
+          DEPLOYMENT_API_URL: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+
+  # CloudFront origin access identity for allowing access to S3 frontend bucket
+  CloudFrontOriginAccessIdentity:
+    Type: "AWS::CloudFront::CloudFrontOriginAccessIdentity"
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: "S3 frontend OA"
+
+  # CloudFront distribution for delivering S3 files over HTTPS
+  CloudFrontDistribution:
+    Type: "AWS::CloudFront::Distribution"
+    Properties:
+      DistributionConfig:
+        Comment: "CloudFront distribution for S3 frontend"
+        DefaultRootObject: "index.html"
+        Enabled: true
+        HttpVersion: http2
+        # List of origins that CloudFront will connect to
+        Origins:
+          - Id: s3-frontend
+            DomainName: !GetAtt FrontendS3Bucket.DomainName
+            S3OriginConfig:
+              # Restricting Bucket access through an origin access identity
+              OriginAccessIdentity:
+                Fn::Sub: "origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}"
+        # To connect the CDN to the origins you need to specify behaviours
+        DefaultCacheBehavior:
+          # Compress resources automatically ( gzip )
+          Compress: "true"
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          ForwardedValues:
+            QueryString: false
+          TargetOriginId: s3-frontend
+          ViewerProtocolPolicy: redirect-to-https
+
+Outputs:
+  ApiEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  FrontendS3BucketUrl:
+    Description: S3 bucket holding the frontend
+    Value: !Sub "https://${FrontendS3Bucket.DomainName}"
+  CloudFrontFrontendUrl:
+    Description: "Secure URL for frontend served by CloudFront"
+    Value: !Sub "https://${CloudFrontDistribution.DomainName}"
+  CognitoUserPoolId:
+    Description: "Cognito user pool ID"
+    Value: !Ref CognitoUserPool
+  CognitoUserPoolClientId:
+    Description: "Cognito user pool client ID"
+    Value: !Ref CognitoUserPoolClient
