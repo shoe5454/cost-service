@@ -10,6 +10,9 @@ const dataSourceAdapter = require('../adapters/data-source.adapter.js');
  * A simple example includes a HTTP get method to get one item by id from a DynamoDB table.
  */
 exports.handler = async (event) => {
+  if (event.httpMethod !== 'GET') {
+    throw new Error(`calculate-cost only accepts GET method, you tried: ${event.httpMethod}`);
+  }
   // All log statements are written to CloudWatch
   console.info('received:', event);
 

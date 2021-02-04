@@ -39,7 +39,7 @@
     <div><br></div>
 
     <div>
-        <a id="signOutButton" href="javascript:void(0)" title="Sign out">Sign Out</a>
+        <a id="signOutButton" href="javascript:void(0)" title="Sign out" style="display: none;">Sign Out</a>
         <!--<div>
             <h2>Tokens</h2>
             <div>
@@ -49,6 +49,7 @@
             </div>
         </div>-->
     </div>
+
     <script>
         var apiUrl = '${DEPLOYMENT_API_URL}';
         var auth = null;
@@ -58,7 +59,7 @@
             // Initiatlize CognitoAuth object
             initCognitoSDK();
             // Attach event handler to sign out button
-            document.getElementById("signOutButton").addEventListener("click", function () {
+            document.getElementById('signOutButton').addEventListener('click', function () {
                 auth.signOut();
             });
             var curUrl = window.location.href;
@@ -66,12 +67,13 @@
 
             if (auth.getUsername()) { // Signed in
                 // Show appropriate blocks according to role/group
+                document.getElementById('signOutButton').style.display = 'block';
                 var session = auth.getSignInUserSession();
                 var accToken = session.getAccessToken().decodePayload();
                 if (accToken['cognito:groups']?.includes('sales_rep') || accToken['cognito:groups']?.includes('costs_admin'))
-                    document.getElementById("quoteForm").style.display = 'block';
+                    document.getElementById('quoteForm').style.display = 'block';
                 if (accToken['cognito:groups']?.includes('costs_admin'))
-                    document.getElementById("uploadCostsForm").style.display = 'block';
+                    document.getElementById('uploadCostsForm').style.display = 'block';
             } else { // Not signed in
                 // Redirect to hosted sign in UI
                 auth.getSession();
@@ -140,7 +142,7 @@
                     //showSignedIn(result);
                 },
                 onFailure: function (err) {
-                    alert("Error! " + err);
+                    alert('Error! ' + err);
                 }
             };
             // The default response_type is "token", uncomment the next line will make it be "code".

@@ -1,18 +1,16 @@
 // Create clients and set shared const values outside of the handler.
 
-// Create a DocumentClient that represents the query to add an item
-const dynamodb = require('aws-sdk/clients/dynamodb');
-const docClient = new dynamodb.DocumentClient();
+// Get the S3 bucket name from environment variables
+const bucketName = process.env.COST_FILES_BUCKET_NAME;
 
-// Get the DynamoDB table name from environment variables
-const tableName = process.env.COSTS_TABLE;
+const costData = require('../business/cost-data.business.js');
 
 /**
  * A simple example includes a HTTP post method to add one item to a DynamoDB table.
  */
-exports.putItemHandler = async (event) => {
+exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
-        throw new Error(`postMethod only accepts POST method, you tried: ${event.httpMethod} method.`);
+        throw new Error(`generate-cost-file-upload-endpoint only accepts POST method, you tried: ${event.httpMethod} method.`);
     }
     // All log statements are written to CloudWatch
     console.info('received:', event);
@@ -24,12 +22,16 @@ exports.putItemHandler = async (event) => {
 
     // Creates a new item, or replaces an old item with a new item
     // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#put-property
-    var params = {
+    /*var params = {
         TableName: tableName,
         Item: { id: id, name: name }
-    };
+    };*/
 
-    const result = await docClient.put(params).promise();
+    const result = await costData.generateCostFileUploadEndpoint(
+        new fileStorageAdapter.S3Adapter(bucketName)
+    );
+
+    //const result = await docClient.put(params).promise();
 
     const response = {
         statusCode: 200,

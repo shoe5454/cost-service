@@ -14,39 +14,29 @@ Description: >-
 Transform:
   - AWS::Serverless-2016-10-31
 
-# Resources declares the AWS resources that you want to include in the stack
-# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
 Resources:
-  # Each Lambda function is defined by properties:
-  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-
-  # This is a Lambda function config associated with the source code: get-all-items.js
-  getAllItemsFunction:
-    Type: AWS::Serverless::Function
+  # API Gateway config
+  RestApi:
+    Type: AWS::Serverless::Api
     Properties:
-      Handler: src/handlers/get-all-items.getAllItemsHandler
-      Runtime: nodejs12.x
-      MemorySize: 128
-      Timeout: 100
-      Description: A simple example includes a HTTP get method to get all items from a DynamoDB table.
-      Policies:
-        # Give Create/Read/Update/Delete Permissions to the CostsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CostsTable
-      Environment:
-        Variables:
-          # Make table name accessible as environment variable from function code during execution
-          COSTS_TABLE: !Ref CostsTable
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /
-            Method: GET
-  # Each Lambda function is defined by properties:
-  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+      StageName: Prod
+      # CORS to allow requests from frontend served by CloudFront
+      Cors: 
+        AllowHeaders: "'authorization'"
+        AllowMethods: "'GET, POST, OPTIONS'"
+        AllowOrigin: !Sub "'https://${CloudFrontDistribution.DomainName}'"
+        AllowCredentials: true
+      # All API requests must be authorized with Cognito
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        # Browsers send OPTIONS requests without Authorization header, so this next line excludes OPTIONS requests
+        # from being authorized
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
 
-  # This is a Lambda function config associated with the source code: calculate-cost.js
+  # Lambda function to calculate cost for new merchants
   calculateCostFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -69,18 +59,35 @@ Resources:
           Properties:
             Path: /costs/{industry}/{monthly_transactions}/{monthly_volume}
             Method: GET
-  # Each Lambda function is defined by properties:
-  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+            RestApiId: !Ref RestApi
 
-  # This is a Lambda function config associated with the source code: put-item.js
-  putItemFunction:
+  # This is a Lambda function config associated with the source code: generate-cost-file-upload-endpoint.js
+  generateCostFileUploadEndpointFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlers/put-item.putItemHandler
+      Handler: src/handlers/generate-cost-file-upload-endpoint.handler
       Runtime: nodejs12.x
       MemorySize: 128
       Timeout: 100
       Description: A simple example includes a HTTP post method to add one item to a DynamoDB table.
+      Policies:
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /costs
+            Method: POST
+            RestApiId: !Ref RestApi
+
+  # This is a Lambda function config associated with the source code: process-cost-file.js
+  processCostFileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/process-cost-file.handler
+      Runtime: nodejs12.x
+      MemorySize: 128
+      Timeout: 100
+      Description: A simple example includes a HTTP get method to get all items from a DynamoDB table.
       Policies:
         # Give Create/Read/Update/Delete Permissions to the CostsTable
         - DynamoDBCrudPolicy:
@@ -94,9 +101,8 @@ Resources:
           Type: Api
           Properties:
             Path: /
-            Method: POST
-  # Simple syntax to create a DynamoDB table with a single attribute primary key, more in
-  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlesssimpletable
+            Method: GET
+            RestApiId: !Ref RestApi
 
   # DynamoDB table to store cost data: {id: &lt;ID&gt;, name: &lt;NAME&gt;}
   CostsTable:
@@ -109,7 +115,7 @@ Resources:
         ReadCapacityUnits: 2
         WriteCapacityUnits: 2
 
-  # Cognito user pool
+  # Users (sales reps and admin users) are stored in this Cognito user pool
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -154,7 +160,7 @@ Resources:
       Domain: !Sub "${AWS::StackName}-${AWS::AccountId}"
       UserPoolId: !Ref CognitoUserPool
 
-  # Predefined groups used to authorize users
+  # Sales and admin groups used to authorize users
   CognitoSalesRepGroup:
     Type: AWS::Cognito::UserPoolGroup
     Properties:
@@ -168,11 +174,11 @@ Resources:
       GroupName: "costs_admin"
       UserPoolId: !Ref CognitoUserPool
 
-  # The S3 bucket that will host the frontend code
+  # The S3 bucket stores the frontend code
   FrontendS3Bucket:
     Type: AWS::S3::Bucket
 
-  # Restrict access to cloudfront only
+  # Restrict S3 bucket access to CloudFront only
   FrontendS3BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -228,7 +234,7 @@ Resources:
           DEPLOYMENT_COGNITO_USER_POOL_ID: !Ref CognitoUserPool
           DEPLOYMENT_COGNITO_DOMAIN: !Sub "${CognitoUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com"
           DEPLOYMENT_FRONTEND_URL: !Sub "https://${CloudFrontDistribution.DomainName}"
-          DEPLOYMENT_API_URL: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+          DEPLOYMENT_API_URL: !Sub "https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
 
   # CloudFront origin access identity for allowing access to S3 frontend bucket
   CloudFrontOriginAccessIdentity:
@@ -238,11 +244,12 @@ Resources:
         Comment: "S3 frontend OA"
 
   # CloudFront distribution for delivering S3 files over HTTPS
+  # This is primarily required because S3 website hosting only does HTTP, not HTTPS
   CloudFrontDistribution:
     Type: "AWS::CloudFront::Distribution"
     Properties:
       DistributionConfig:
-        Comment: "CloudFront distribution for S3 frontend"
+        Comment: !Sub "${AWS::StackName} frontend stored in S3 is served by this CloudFront distribution"
         DefaultRootObject: "index.html"
         Enabled: true
         HttpVersion: http2
@@ -270,9 +277,9 @@ Resources:
 Outputs:
   ApiEndpoint:
     Description: "API Gateway endpoint URL for Prod stage"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Value: !Sub "https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
   FrontendS3BucketUrl:
-    Description: S3 bucket holding the frontend
+    Description: Frontend code is stored in this S3 bucket
     Value: !Sub "https://${FrontendS3Bucket.DomainName}"
   CloudFrontFrontendUrl:
     Description: "Secure URL for frontend served by CloudFront"
