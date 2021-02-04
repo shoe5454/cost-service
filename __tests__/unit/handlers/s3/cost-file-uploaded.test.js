@@ -1,5 +1,5 @@
-// Import all functions from process-cost-file.js 
-const lambda = require('../../../src/handlers/process-cost-file.js');
+// Import all functions from cost-file-uploaded.js 
+const lambda = require('../../../../src/handlers/s3/cost-file-uploaded.js');
 // Import dynamodb from aws-sdk 
 const dynamodb = require('aws-sdk/clients/dynamodb');
 

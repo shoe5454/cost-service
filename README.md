@@ -86,9 +86,9 @@ To build and deploy the project to AWS follow these steps.
 
 1. In Visual Studio Code, hit F1 then search for the `Remote-Containers: Open Folder in Container...` command.
 2. Browse for and select your `<PROJECT_DIR>` folder.
-  * The Docker container for your development environment will be created. This may take a few minutes.
+   * The Docker container for your development environment will be created. This may take a few minutes.
 4. Open the Terminal panel in Visual Studio Code. Run `aws configure` and follow the prompts.
-  * Recommend using `us-east-1` as the default region because the project has not been tested with other regions.
+   * Recommend using `us-east-1` as the default region because the project has not been tested with other regions.
 5. In the Terminal panel, run `npm install` . This is only required if you intend to run unit tests locally.
 
 ### Deploy To AWS
@@ -103,16 +103,16 @@ The project uses the AWS Serverless Application Model (SAM). Use the following s
    ```sh
    sam deploy --guided --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND
    ```
-   `CAPABILITY_AUTO_EXPAND` is required because the SAM template uses a nested stack.
-   To access the project frontend, point your browser to the URL shown in the CloudFormation/SAM output key `CloudFrontFrontendUrl`
+   * `CAPABILITY_AUTO_EXPAND` is required because the SAM template uses a nested stack.
+   * To access the project frontend, point your browser to the URL shown in the CloudFormation/SAM output key `CloudFrontFrontendUrl`
 3. If this is not the first time deploying and you have made changes to the frontend code, invalidate the project's CloudFront web distribution.
-  * You can identify the project's web distribution in CloudFront by searching for the stack name you chose when deploying the project. The stack name should appear in the distibution's Comment field.
+   * You can identify the project's web distribution in CloudFront by searching for the stack name you chose when deploying the project. The stack name should appear in the distibution's Comment field.
 4. Create users for the sales representative and the administrator in AWS Cognito (https://console.aws.amazon.com/cognito).
-  * The project's Cognito user pool name is the  stack name you chose when deploying the project.
+   * The project's Cognito user pool name is the  stack name you chose when deploying the project.
 5. Assign the created users to the relevant group in Cognito (`sales_rep` and `costs_admin`).
-  * These groups should already exist in Cognito, they were created when the project was deployed.
-  * Users assigned to the `sales_rep` group will have permission to calculate costs for new merchants.
-  * Users assigned to the `costs_admin` group will have permission to calculate costs for new merchants as well as upload CSVs to replace existing cost data.
+   * These groups should already exist in Cognito, they were created when the project was deployed.
+   * Users assigned to the `sales_rep` group will have permission to calculate costs for new merchants.
+   * Users assigned to the `costs_admin` group will have permission to calculate costs for new merchants as well as upload CSVs to replace existing cost data.
 6. Log in as the `costs_admin` user and upload the example CSV TODO
 
 ## Architecture
@@ -133,7 +133,15 @@ npm run test
 
 ### Local Lambdas
 
-TODO
+Because the following command to start the local API server needs to run under sudo, you'll need to first run `aws configure` under sudo:
+```sh
+sudo aws configure
+```
+
+Then run:
+```sh
+sudo sam local start-api
+```
 
 <!-- USAGE EXAMPLES -->
 ## Usage

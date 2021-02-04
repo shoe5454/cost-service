@@ -1,18 +1,20 @@
 // Create clients and set shared const values outside of the handler.
 
 // Get the DynamoDB table name from environment variables
-const tableName = process.env.COSTS_TABLE;
+const costsTableName = process.env.COSTS_TABLE;
 
-const calculateCost = require('../business/calculate-cost.business.js');
-const dataSourceAdapter = require('../adapters/data-source.adapter.js');
+const calculateCost = require('../../business/calculate-cost.business.js');
+const dataSourceAdapter = require('../../adapters/data-source.adapter.js');
+const { authorizeSalesRepOrCostsAdmin } = require('./security/cognito-authorize.js');
+const { expectHttpGet } = require('./security/http-method-check.js');
 
 /**
- * A simple example includes a HTTP get method to get one item by id from a DynamoDB table.
+ * 
  */
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'GET') {
-    throw new Error(`calculate-cost only accepts GET method, you tried: ${event.httpMethod}`);
-  }
+  authorizeSalesRepOrCostsAdmin(event);
+  expectHttpGet(event);
+
   // All log statements are written to CloudWatch
   console.info('received:', event);
 
@@ -20,12 +22,13 @@ exports.handler = async (event) => {
     event.pathParameters.industry,
     event.pathParameters.monthlyTransactions,
     event.pathParameters.monthlyVolume,
-    new dataSourceAdapter.DynamoDbAdapter(tableName)
+    new dataSourceAdapter.DynamoDbAdapter(costsTableName)
   );
 
   const response = {
     statusCode: 200,
-    body: cost
+    body: JSON.stringify({ cost }),
+    headers: { 'Access-Control-Allow-Origin': '*' }
   };
 
   // All log statements are written to CloudWatch

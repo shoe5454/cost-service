@@ -10,7 +10,10 @@ const { ValidationError } = require("../errors/validation.error");
  * @returns Result as a number rounded to 2 decimal places
  */
 exports.linearInterpolation = (x, x1, y1, x2, y2) => {
-    // TODO validate inputs
+    // Validate inputs
+    if (x1 === x2)
+        throw new ValidationError(`Cannot interpolate when reference points are the same`);
+
     const numerator = (x - x1) * (y2 - y1);
     const denominator = x2 - x1;
     const result = y1 + (numerator / denominator);

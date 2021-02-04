@@ -40,7 +40,7 @@ Resources:
   calculateCostFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlers/calculate-cost.handler
+      Handler: src/handlers/rest/calculate-cost.handler
       Runtime: nodejs12.x
       MemorySize: 128
       Timeout: 100
@@ -65,12 +65,16 @@ Resources:
   generateCostFileUploadEndpointFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlers/generate-cost-file-upload-endpoint.handler
+      Handler: src/handlers/rest/generate-cost-file-upload-endpoint.handler
       Runtime: nodejs12.x
       MemorySize: 128
       Timeout: 100
       Description: A simple example includes a HTTP post method to add one item to a DynamoDB table.
       Policies:
+      Environment:
+        Variables:
+          # Make bucket name accessible as environment variable from function code during execution
+          COST_FILES_BUCKET: !Ref CostFilesS3Bucket
       Events:
         Api:
           Type: Api
@@ -79,11 +83,11 @@ Resources:
             Method: POST
             RestApiId: !Ref RestApi
 
-  # This is a Lambda function config associated with the source code: process-cost-file.js
-  processCostFileFunction:
+  # This is a Lambda function config associated with the source code: cost-file-uploaded.js
+  costFileUploadedFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlers/process-cost-file.handler
+      Handler: src/handlers/s3/cost-file-uploaded.handler
       Runtime: nodejs12.x
       MemorySize: 128
       Timeout: 100
@@ -96,13 +100,9 @@ Resources:
         Variables:
           # Make table name accessible as environment variable from function code during execution
           COSTS_TABLE: !Ref CostsTable
+          # Make bucket name accessible as environment variable from function code during execution
+          COST_FILES_BUCKET: !Ref CostFilesS3Bucket
       Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /
-            Method: GET
-            RestApiId: !Ref RestApi
 
   # DynamoDB table to store cost data: {id: &lt;ID&gt;, name: &lt;NAME&gt;}
   CostsTable:
@@ -114,6 +114,10 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 2
         WriteCapacityUnits: 2
+
+  # S3 bucket to store uploaded cost files
+  CostFilesS3Bucket:
+    Type: AWS::S3::Bucket
 
   # Users (sales reps and admin users) are stored in this Cognito user pool
   CognitoUserPool:
@@ -278,8 +282,8 @@ Outputs:
   ApiEndpoint:
     Description: "API Gateway endpoint URL for Prod stage"
     Value: !Sub "https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
-  FrontendS3BucketUrl:
-    Description: Frontend code is stored in this S3 bucket
+  FrontendS3Bucket:
+    Description: "Frontend code is stored in this S3 bucket"
     Value: !Sub "https://${FrontendS3Bucket.DomainName}"
   CloudFrontFrontendUrl:
     Description: "Secure URL for frontend served by CloudFront"
@@ -290,3 +294,9 @@ Outputs:
   CognitoUserPoolClientId:
     Description: "Cognito user pool client ID"
     Value: !Ref CognitoUserPoolClient
+  DynamoDbCostsTable:
+    Description: "Name of the DynamoDB table used to store costs data"
+    Value: !Ref CostsTable
+  CostFilesS3Bucket:
+    Description: "Uploaded cost files are stored in this S3 bucket"
+    Value: !Sub "https://${CostFilesS3Bucket.DomainName}"

@@ -34,6 +34,22 @@
 
     <div id="uploadCostsForm" style="display: none">
         <h1>Upload costs CSV</h1>
+        <form onsubmit="generateCostFileUploadUrl(event, this)" method="post" enctype="multipart/form-data">
+            <div>
+                <input type="file" name="file" id="uploadCostsFile">
+            </div>
+            <!--
+            <input type="text" name="success_action_redirect" value="<%= success_action_redirect %>" />
+            <input type="text" name="X-Amz-Algorithm" value="<%= algorithm %>">
+            <input type="text" name="X-Amz-Credential" value="<%= credential %>">
+            <input type="text" name="X-Amz-Date" value="<%= date %>">
+            <input type="text" name="X-Amz-Signature" value="<%= signature %>">
+            <input type="text" name="Policy" value="<%= policy %>" />
+            <input type="text" name="key" value="<%= key %>">-->
+            <div>
+                <button type="submit">Upload</button>
+            </div>
+        </form>
     </div>
 
     <div><br></div>
@@ -93,7 +109,38 @@
                 return response.json();
             }).then(function (data) {
                 //Success code goes here
-                alert('form submited');
+                alert(`Cost is ${data}`);
+            }).catch(function (err) {
+                //Failure
+                alert('Error ' + err);
+            });
+        }
+
+        function generateCostFileUploadUrl(e, form) {
+            e.preventDefault();
+
+            var token = auth.getSignInUserSession().getIdToken().getJwtToken();
+            fetch(`${apiUrl}costs`, {
+                method: 'post',
+                headers: {
+                    Authorization: token
+                },
+            }).then(function (response) {
+                response = response.json();
+                console.log(response);
+                var formData = new FormData();
+                Object.entries(response.fields).forEach(([k, v]) => {
+                    formData.append(k, v);
+                });
+                formData.append('file', document.getElementById('uploadCostsFile').files[0]);
+                return fetch(response.url, {
+                    method: 'post',
+                    body: formData,
+                });
+            }).then(function (data) {
+                console.log(data);
+                //Success code goes here
+                alert('Cost file uploaded. May take a few minutes to complete processing on the server');
             }).catch(function (err) {
                 //Failure
                 alert('Error ' + err);

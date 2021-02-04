@@ -1,5 +1,5 @@
 // Import all functions from calculate-cost.js 
-const lambda = require('../../../src/handlers/calculate-cost.js');
+const lambda = require('../../../../src/handlers/rest/calculate-cost.js');
 // Import dynamodb from aws-sdk 
 const dynamodb = require('aws-sdk/clients/dynamodb');
 
@@ -48,6 +48,13 @@ describe('Test handler', () => {
                 industry: 'Bakeries',
                 monthlyTransactions: 1000,
                 monthlyVolume: 10000.00,
+            },
+            requestContext: {
+                authorizer: {
+                    claims: {
+                        'cognito:groups': "sales_rep"
+                    }
+                }
             }
         }
 

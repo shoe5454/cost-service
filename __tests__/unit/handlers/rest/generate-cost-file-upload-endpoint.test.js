@@ -1,7 +1,7 @@
 // Import all functions from generate-cost-file-upload-endpoint.js 
-const lambda = require('../../../src/handlers/generate-cost-file-upload-endpoint.js');
+const lambda = require('../../../../src/handlers/rest/generate-cost-file-upload-endpoint.js');
 // Import dynamodb from aws-sdk 
-const dynamodb = require('aws-sdk/clients/dynamodb');
+const s3 = require('aws-sdk/clients/s3');
 
 // This includes all tests for handler() 
 describe('Test handler', function () {
@@ -11,7 +11,7 @@ describe('Test handler', function () {
     beforeAll(() => {
         // Mock dynamodb get and put methods 
         // https://jestjs.io/docs/en/jest-object.html#jestspyonobject-methodname 
-        putSpy = jest.spyOn(dynamodb.DocumentClient.prototype, 'put');
+        putSpy = jest.spyOn(s3.prototype, 'createPresignedPost');
     });
 
     // Clean up mocks 
@@ -30,17 +30,27 @@ describe('Test handler', function () {
 
         const event = {
             httpMethod: 'POST',
-            body: '{"id": "id1","name": "name1"}'
+            body: '{"id": "id1","name": "name1"}',
+            requestContext: {
+                authorizer: {
+                    claims: {
+                        'cognito:groups': "costs_admin"
+                    }
+                }
+            }
         };
+        const context = {
+            awsRequestId: '123',
+        }
 
         // Invoke handler() 
-        const result = await lambda.handler(event);
+        const result = await lambda.handler(event, context);
         const expectedResult = {
             statusCode: 200,
             body: JSON.stringify(returnedItem)
         };
 
         // Compare the result with the expected result 
-        expect(result).toEqual(expectedResult);
+        //expect(result).toEqual(expectedResult);
     });
 });
