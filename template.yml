@@ -45,6 +45,9 @@ Resources:
       MemorySize: 128
       Timeout: 100
       Description: A simple example includes a HTTP get method to get one item by id from a DynamoDB table.
+      # Don't retry failed attempts
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0
       Policies:
         # Give Create/Read/Update/Delete Permissions to the CostsTable
         - DynamoDBCrudPolicy:
@@ -70,7 +73,13 @@ Resources:
       MemorySize: 128
       Timeout: 100
       Description: A simple example includes a HTTP post method to add one item to a DynamoDB table.
+      # Don't retry failed attempts
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0
       Policies:
+        # Since this function is generating an upload url it needs the S3 write policy
+        - S3WritePolicy:
+            BucketName: !Ref CostFilesS3Bucket
       Environment:
         Variables:
           # Make bucket name accessible as environment variable from function code during execution
@@ -83,16 +92,22 @@ Resources:
             Method: POST
             RestApiId: !Ref RestApi
 
-  # This is a Lambda function config associated with the source code: cost-file-uploaded.js
-  costFileUploadedFunction:
+  # This is a Lambda function config associated with the source code: costs-file-uploaded.js
+  costsFileUploadedFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlers/s3/cost-file-uploaded.handler
+      Handler: src/handlers/s3/costs-file-uploaded.handler
       Runtime: nodejs12.x
       MemorySize: 128
       Timeout: 100
       Description: A simple example includes a HTTP get method to get all items from a DynamoDB table.
+      # Don't retry failed attempts
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0
       Policies:
+        # Commented out as it causes a circular dependency: lambda function depends on role depends on bucket depends on lambda function (because of the FileUploaded Event)
+        # - S3ReadPolicy:
+        #     BucketName: !Ref CostFilesS3Bucket
         # Give Create/Read/Update/Delete Permissions to the CostsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref CostsTable
@@ -100,24 +115,73 @@ Resources:
         Variables:
           # Make table name accessible as environment variable from function code during execution
           COSTS_TABLE: !Ref CostsTable
-          # Make bucket name accessible as environment variable from function code during execution
-          COST_FILES_BUCKET: !Ref CostFilesS3Bucket
       Events:
+        FileUploaded:
+          Type: S3
+          Properties:
+            Bucket: !Ref CostFilesS3Bucket
+            Events: s3:ObjectCreated:*
 
-  # DynamoDB table to store cost data: {id: &lt;ID&gt;, name: &lt;NAME&gt;}
+  # This solves the circular dependency problem in the costsFileUploadedFunction policy
+  CostsFileUploadedFunctionCanReadUploads:
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: CostsFileUploadedFunctionCanReadUploads
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - "s3:GetObject"
+            Resource: 
+              - !Sub "${CostFilesS3Bucket.Arn}/*"
+      Roles:
+        # This role is implicitly created by SAM
+        - !Ref costsFileUploadedFunctionRole
+
+  # This allows DynamoDbAdapter to recreate tables
+  CostsFileUploadedFunctionCanRecreateDynamoDbTables:
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: CostsFileUploadedFunctionCanRecreateDynamoDbTables
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - "dynamodb:DeleteTable"
+              - "dynamodb:CreateTable"
+            Resource: 
+              - !Sub "${CostsTable.Arn}"
+      Roles:
+        # This role is implicitly created by SAM
+        - !Ref costsFileUploadedFunctionRole
+
+  # DynamoDB table to store cost data
   CostsTable:
     Type: AWS::Serverless::SimpleTable
-    Properties:
-      PrimaryKey:
-        Name: id
-        Type: String
-      ProvisionedThroughput:
-        ReadCapacityUnits: 2
-        WriteCapacityUnits: 2
+    # Properties:
+      # Commented out as these properties are now defined in data-source-adapter.js
+      # PrimaryKey:
+      #   Name: industry
+      #   Type: String
+      # ProvisionedThroughput:
+      #   ReadCapacityUnits: 2
+      #   WriteCapacityUnits: 2
 
   # S3 bucket to store uploaded cost files
   CostFilesS3Bucket:
     Type: AWS::S3::Bucket
+    Properties:
+      # CORS to allow CloudFront frontend to upload files
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - POST
+            AllowedOrigins: 
+              - !Sub "https://${CloudFrontDistribution.DomainName}"
 
   # Users (sales reps and admin users) are stored in this Cognito user pool
   CognitoUserPool:

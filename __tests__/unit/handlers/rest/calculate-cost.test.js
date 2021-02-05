@@ -1,17 +1,14 @@
-// Import all functions from calculate-cost.js 
 const lambda = require('../../../../src/handlers/rest/calculate-cost.js');
-// Import dynamodb from aws-sdk 
-const dynamodb = require('aws-sdk/clients/dynamodb');
+const DynamoDB = require('aws-sdk/clients/dynamodb');
 
-// This includes all tests for handler() 
 describe('Test handler', () => {
     let getSpy;
 
     // Test one-time setup and teardown, see more in https://jestjs.io/docs/en/setup-teardown 
     beforeAll(() => {
-        // Mock dynamodb get and put methods 
+        // Mock dynamodb get method
         // https://jestjs.io/docs/en/jest-object.html#jestspyonobject-methodname 
-        getSpy = jest.spyOn(dynamodb.DocumentClient.prototype, 'get');
+        getSpy = jest.spyOn(DynamoDB.DocumentClient.prototype, 'get');
     });
 
     // Clean up mocks 
@@ -20,7 +17,7 @@ describe('Test handler', () => {
     });
 
     // This test invokes handler() and compare the result  
-    it('should get item by id', async () => {
+    it('should calculate cost', async () => {
         const item = {
             TERMINAL: 50.00,
             TRANSACTION_COUNT: {
@@ -63,10 +60,13 @@ describe('Test handler', () => {
 
         const expectedResult = {
             statusCode: 200,
-            body: JSON.stringify(item)
+            body: JSON.stringify(69.08),
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+            }
         };
 
         // Compare the result with the expected result 
-        //expect(result).toEqual(expectedResult);
+        expect(result).toEqual(expectedResult);
     });
 });

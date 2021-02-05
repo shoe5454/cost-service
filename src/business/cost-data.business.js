@@ -1,26 +1,69 @@
-const csv = require('csv-parser');
-const fs = require('fs');
+const csv = require('fast-csv');
+const { authorizeCostsAdmin } = require('./security/authorize.js');
 
-exports.generateCostFileUploadEndpoint = async (uploadFileName, fileStorageAdapter) => {
-    return await fileStorageAdapter.generateUploadUrl(uploadFileName);
-}
+/**
+ * Business methods related to managing the costing data
+ */
+exports.CostData = class {
+    constructor(userPerms) {
+        this.userPerms = userPerms;
+    }
 
-exports.costFileUploaded = async (fileStorageAdapter, dataSourceAdapter) => {
-    const file = await fileStorageAdapter.getFile(TODO);
+    async generateCostFileUploadEndpoint(uploadFileName, fileStorageAdapter) {
+        authorizeCostsAdmin(this.userPerms);
 
-    this.processCostFile(file);
-}
+        return await fileStorageAdapter.generateCostsFileUploadUrl(uploadFileName);
+    }
 
-exports.processCostFile = (file) => {
-    const normalized = {};
+    async costsFileUploaded(filepath, fileStorageAdapter, dataSourceAdapter) {
+        console.info(`processing costs CSV file at ${filepath}`);
 
-    fs.createReadStream(file)
-        .pipe(csv())
-        .on('data', (row) => {
-            console.log(row);
-        })
-        .on('end', () => {
-            console.log('CSV file successfully processed');
+        const stream = fileStorageAdapter.getCostsFile(filepath);
+
+        const normalizedCosts = await this.normalizeCostsFile(stream);
+
+        await dataSourceAdapter.replaceCostData(normalizedCosts);
+    }
+
+    async normalizeCostsFile(stream) {
+        stream = stream.pipe(csv.parse({ headers: true, trim: true }));
+
+        const promise = new Promise((resolve, reject) => {
+            const normalized = {};
+
+            stream.on('data', (row) => {
+                //console.log(row);
+                // Initialize the industry data object if it hasn't been initialized
+                if (!normalized[row['Industry']]) {
+                    normalized[row['Industry']] = {
+                        'TRANSACTION_COUNT': {},
+                        'TRANSACTION_VOLUME': {},
+                    };
+                }
+                const normalizedIndustry = normalized[row['Industry']];
+                // Assign the row to the appropriate field in the normalized object
+                switch (row['Type']) {
+                    case 'TERMINAL':
+                        normalizedIndustry['TERMINAL'] = row['Price'];
+                        break;
+                    case 'TRANSACTION_COUNT':
+                        normalizedIndustry['TRANSACTION_COUNT'][row['Value']] = row['Price'];
+                        break;
+                    case 'TRANSACTION_VOLUME':
+                        normalizedIndustry['TRANSACTION_VOLUME'][row['Value']] = row['Price'];
+                        break;
+                }
+            });
+            stream.on('error', (err) => {
+                console.error('Error parsing cost CSV: ' + err);
+                reject(err);
+            });
+            stream.on('end', () => {
+                console.log('Cost CSV successfully parsed');
+                resolve(normalized);
+            });
         });
 
+        return await promise;
+    }
 }

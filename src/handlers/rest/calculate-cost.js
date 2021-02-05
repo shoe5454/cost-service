@@ -3,33 +3,32 @@
 // Get the DynamoDB table name from environment variables
 const costsTableName = process.env.COSTS_TABLE;
 
-const calculateCost = require('../../business/calculate-cost.business.js');
+const { CalculateCost } = require('../../business/calculate-cost.business.js');
 const dataSourceAdapter = require('../../adapters/data-source.adapter.js');
-const { authorizeSalesRepOrCostsAdmin } = require('./security/cognito-authorize.js');
-const { expectHttpGet } = require('./security/http-method-check.js');
+const { expectHttpGet, extractUserPermissions, okResponse, errorResponse } = require('./security/gateway.js');
 
 /**
  * 
  */
 exports.handler = async (event) => {
-  authorizeSalesRepOrCostsAdmin(event);
   expectHttpGet(event);
 
   // All log statements are written to CloudWatch
-  console.info('received:', event);
+  console.info('received event:', event);
 
-  const cost = await calculateCost.calculateCost(
-    event.pathParameters.industry,
-    event.pathParameters.monthlyTransactions,
-    event.pathParameters.monthlyVolume,
-    new dataSourceAdapter.DynamoDbAdapter(costsTableName)
-  );
-
-  const response = {
-    statusCode: 200,
-    body: JSON.stringify({ cost }),
-    headers: { 'Access-Control-Allow-Origin': '*' }
-  };
+  const business = new CalculateCost(extractUserPermissions(event));
+  let response;
+  try {
+    const cost = await business.calculateCost(
+      event.pathParameters.industry,
+      event.pathParameters.monthlyTransactions,
+      event.pathParameters.monthlyVolume,
+      new dataSourceAdapter.DynamoDbAdapter(costsTableName)
+    );
+    response = okResponse(cost);
+  } catch (e) {
+    response = errorResponse(e);
+  }
 
   // All log statements are written to CloudWatch
   console.info(`response from: ${event.path} statusCode: ${response.statusCode} body: ${response.body}`);

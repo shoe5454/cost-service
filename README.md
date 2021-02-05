@@ -48,16 +48,16 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+[![Screen Shot][product-screenshot]](https://github.com/shoe5454/cost-service)
 
 This is my response to the coding challenge posed by a certain company.
 
 ### Built With
 
-* [AWS](https://getbootstrap.com)
-* [Node](https://jquery.com)
-* [Docker](https://laravel.com)
-* [Visual Studio Code](https://laravel.com)
+* [AWS](https://aws.amazon.com)
+* [Node](https://nodejs.org)
+* [Docker](https://www.docker.com)
+* [Visual Studio Code](https://code.visualstudio.com)
 
 It is assumed the reader has knowledge of the above and is able to find his/her way around them.
 
@@ -113,7 +113,7 @@ The project uses the AWS Serverless Application Model (SAM). Use the following s
    * These groups should already exist in Cognito, they were created when the project was deployed.
    * Users assigned to the `sales_rep` group will have permission to calculate costs for new merchants.
    * Users assigned to the `costs_admin` group will have permission to calculate costs for new merchants as well as upload CSVs to replace existing cost data.
-6. Log in as the `costs_admin` user and upload the example CSV TODO
+6. Log in as the user belonging to the `costs_admin` group and upload the example CSV located in `<PROJECT_DIR>/__tests__/unit/business/cost-data-example.csv` . To log in, point your web browser to the URL shown in the CloudFormation/SAM output key `CloudFrontFrontendUrl`.
 
 ## Architecture
 
@@ -121,6 +121,34 @@ Logical architecture diagram
 
 ## Project Folder Structure
 
+```sh
+/
+|
+|-__tests__/
+  |-integration/
+  |-unit/
+|-.devcontainer/
+|-.vscode/
+|-doc/
+|-events/
+|-src/
+  |-adapters/
+  |-business/
+  |-errors/
+  |-handlers/
+  |-ui/
+|-template.yml
+```
+
+Notable folders:
+* `/doc :` Documentation related files
+* `/events :` Sample events to use when running locally
+* `/src/adapters :` Adapters to external resources ala the _hexagonal/ports and adapters_ design pattern.
+* `/src/business :` The bulk of the 'application logic'. Also does user permissions testing
+* `/src/errors :` Custom errors
+* `/src/handlers :` Lambda handlers which invoke the business logic. Performs Lambda/transport specific tasks.
+* `/src/ui :` Content in this folder is deployed as static website resources on S3/CloudFront.
+* `/template.yml :` SAM template
 
 ## Running Locally
 
@@ -130,6 +158,15 @@ From the Terminal panel in Visual Studio Code:
 ```sh
 npm run test
 ```
+
+### Integration Tests
+
+From the Terminal panel in Visual Studio Code:
+```sh
+npm run integ-test
+```
+
+NOTE: Integration test is not yet working
 
 ### Local Lambdas
 
@@ -146,31 +183,18 @@ sudo sam local start-api
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-_For more examples, please refer to the [Documentation](https://example.com)_
-
-
+To calculate the cost for a new merchant, log in and use the `Calculate cost` form. All 3 fields are required. You'll need to type in the industry as an exact match (minus leading and trailing whitespace) to what was in the CSV.
 
 <!-- KNOWN LIMITATIONS -->
 ## Known Limitations
 
 1. CloudFront needs to be manually invalidated after deploying updated frontend code.
-
+2. No dropdown or select field for the industry in the _Calculate cost_ form.
 
 <!-- LICENSE -->
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
-
-
-
-<!-- CONTACT -->
-## Contact
-
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
-
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
 
 
 
@@ -188,7 +212,7 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 [issues-url]: https://github.com/othneildrew/Best-README-Template/issues
 [license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
 [license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
-[product-screenshot]: images/screenshot.png
+[product-screenshot]: doc/images/screenshot.png
 
 
 

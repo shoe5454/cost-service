@@ -38,16 +38,8 @@
             <div>
                 <input type="file" name="file" id="uploadCostsFile">
             </div>
-            <!--
-            <input type="text" name="success_action_redirect" value="<%= success_action_redirect %>" />
-            <input type="text" name="X-Amz-Algorithm" value="<%= algorithm %>">
-            <input type="text" name="X-Amz-Credential" value="<%= credential %>">
-            <input type="text" name="X-Amz-Date" value="<%= date %>">
-            <input type="text" name="X-Amz-Signature" value="<%= signature %>">
-            <input type="text" name="Policy" value="<%= policy %>" />
-            <input type="text" name="key" value="<%= key %>">-->
             <div>
-                <button type="submit">Upload</button>
+                <button type="submit" id="uploadCostsButton">Upload</button>
             </div>
         </form>
     </div>
@@ -81,7 +73,7 @@
             var curUrl = window.location.href;
             auth.parseCognitoWebResponse(curUrl);
 
-            if (auth.getUsername()) { // Signed in
+            if (auth.isUserSignedIn()) { // Signed in
                 // Show appropriate blocks according to role/group
                 document.getElementById('signOutButton').style.display = 'block';
                 var session = auth.getSignInUserSession();
@@ -106,6 +98,8 @@
                     Authorization: token
                 },
             }).then(function (response) {
+                if (!response.ok)
+                    throw response.status;
                 return response.json();
             }).then(function (data) {
                 //Success code goes here
@@ -120,30 +114,35 @@
             e.preventDefault();
 
             var token = auth.getSignInUserSession().getIdToken().getJwtToken();
+            document.getElementById('uploadCostsButton').disabled = true;
             fetch(`${apiUrl}costs`, {
                 method: 'post',
                 headers: {
                     Authorization: token
                 },
             }).then(function (response) {
-                response = response.json();
-                console.log(response);
+                return response.json();
+            }).then(function (data) {
+                // Build the FormData object from the fields obtained
                 var formData = new FormData();
-                Object.entries(response.fields).forEach(([k, v]) => {
+                Object.entries(data.fields).forEach(([k, v]) => {
                     formData.append(k, v);
                 });
                 formData.append('file', document.getElementById('uploadCostsFile').files[0]);
-                return fetch(response.url, {
+                // Upload the file to S3
+                return fetch(data.url, {
                     method: 'post',
                     body: formData,
                 });
-            }).then(function (data) {
-                console.log(data);
+            }).then(function (response) {
+                // File uploaded successfully
                 //Success code goes here
                 alert('Cost file uploaded. May take a few minutes to complete processing on the server');
             }).catch(function (err) {
                 //Failure
                 alert('Error ' + err);
+            }).finally(function () {
+                document.getElementById('uploadCostsButton').disabled = false;
             });
         }
 

@@ -1,6 +1,7 @@
 const AWS = require("aws-sdk");
 const https = require("https");
 
+// TODO this hasn't been updated from the sample AWS integration test
 /**
  * Get stack name from environment variable AWS_SAM_STACK_NAME and make an API call to verify the stack exists.
  * throw exception if AWS_SAM_STACK_NAME is not set.
@@ -10,7 +11,7 @@ const getAndVerifyStackName = async () => {
   if (!stackName) {
     throw new Error(
       "Cannot find env var AWS_SAM_STACK_NAME.\n" +
-        "Please setup this environment variable with the stack name where we are running integration tests."
+      "Please setup this environment variable with the stack name where we are running integration tests."
     );
   }
 
@@ -24,7 +25,7 @@ const getAndVerifyStackName = async () => {
   } catch (e) {
     throw new Error(
       `Cannot find stack ${stackName}: ${e.message}\n` +
-        `Please make sure stack with the name "${stackName}" exists.`
+      `Please make sure stack with the name "${stackName}" exists.`
     );
   }
 
