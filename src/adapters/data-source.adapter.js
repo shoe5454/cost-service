@@ -24,7 +24,7 @@ exports.DynamoDbAdapter = class {
         const data = await docClient.get(params).promise();
         if (!data.Item)
             throw new NotFoundError();
-        return data.Item;
+        return data.Item.costData;
     }
 
     /**

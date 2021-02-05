@@ -1,5 +1,3 @@
-// Create clients and set shared const values outside of the handler.
-
 // Get the S3 bucket name from environment variables
 const costFilesBucketName = process.env.COST_FILES_BUCKET;
 
@@ -8,15 +6,15 @@ const fileStorageAdapter = require('../../adapters/file-storage.adapter.js');
 const { expectHttpPost, extractUserPermissions, okResponse, errorResponse } = require('./security/gateway.js');
 
 /**
- * 
+ * Invoked from API Gateway. Requests a URL that the client can use to upload a cost CSV file
  */
 exports.handler = async (event, context) => {
     expectHttpPost(event);
 
-    // All log statements are written to CloudWatch
     console.info('received event:', event);
     console.info('received context:', context);
 
+    // Business objects contains the bulk of the application logic
     const business = new CostData(extractUserPermissions(event));
     let response;
     try {
@@ -29,7 +27,6 @@ exports.handler = async (event, context) => {
         response = errorResponse(e);
     }
 
-    // All log statements are written to CloudWatch
     console.info(`response from: ${event.path} statusCode: ${response.statusCode} body: ${response.body}`);
     return response;
 }

@@ -4,7 +4,6 @@
 <head>
     <title>Cost Service</title>
     <meta charset="UTF-8">
-    <!--<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>-->
     <script src="amazon-cognito-auth-js/1.3.3/amazon-cognito-auth.min.js"></script>
 </head>
 
@@ -48,14 +47,6 @@
 
     <div>
         <a id="signOutButton" href="javascript:void(0)" title="Sign out" style="display: none;">Sign Out</a>
-        <!--<div>
-            <h2>Tokens</h2>
-            <div>
-                <pre id="idtoken"> ... </pre>
-                <pre id="acctoken"> ... </pre>
-                <pre id="reftoken"> ... </pre>
-            </div>
-        </div>-->
     </div>
 
     <script>
@@ -88,6 +79,9 @@
             }
         }
 
+        /**
+         * Calculate cost button clicked
+         */
         function calculateCost(e, form) {
             e.preventDefault();
 
@@ -98,9 +92,7 @@
                     Authorization: token
                 },
             }).then(function (response) {
-                if (!response.ok)
-                    throw response.status;
-                return response.json();
+                return extractResponseJson(response);
             }).then(function (data) {
                 //Success code goes here
                 alert(`Cost is ${data}`);
@@ -110,6 +102,9 @@
             });
         }
 
+        /**
+         * Upload button clicked
+         */
         function generateCostFileUploadUrl(e, form) {
             e.preventDefault();
 
@@ -121,7 +116,7 @@
                     Authorization: token
                 },
             }).then(function (response) {
-                return response.json();
+                return extractResponseJson(response);
             }).then(function (data) {
                 // Build the FormData object from the fields obtained
                 var formData = new FormData();
@@ -146,29 +141,9 @@
             });
         }
 
-        // Operations when signed in.
-        /*function showSignedIn(session) {
-            if (session) {
-                var idToken = session.getIdToken();
-                if (idToken) {
-                    var payload = idToken.decodePayload();
-                    var formatted = JSON.stringify(payload, undefined, 2);
-                    document.getElementById('idtoken').innerHTML = formatted;
-                }
-                var accToken = session.getAccessToken();
-                if (accToken) {
-                    var payload = accToken.decodePayload();
-                    var formatted = JSON.stringify(payload, undefined, 2);
-                    document.getElementById('acctoken').innerHTML = formatted;
-                }
-                var refToken = session.getRefreshToken().getToken();
-                if (refToken) {
-                    document.getElementById('reftoken').innerHTML = refToken.substring(1, 20);
-                }
-            }
-        }*/
-
-        // Initialize a cognito auth object.
+        /**
+         * Initialize a cognito auth object.
+         */
         function initCognitoSDK() {
             var authData = {
                 ClientId: '${DEPLOYMENT_COGNITO_CLIENT_ID}', // Your client id here
@@ -193,6 +168,16 @@
             };
             // The default response_type is "token", uncomment the next line will make it be "code".
             // auth.useCodeGrantFlow();
+        }
+
+        function extractResponseJson(response) {
+            if (!response.ok) {
+                var msg = response.status;
+                if (response.statusText)
+                    msg += ': ' + response.statusText;
+                throw msg;
+            }
+            return response.json();
         }
     </script>
 </body>

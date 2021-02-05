@@ -9,12 +9,23 @@ exports.CostData = class {
         this.userPerms = userPerms;
     }
 
+    /**
+     * Generates a URL that the client can use to securely POST upload a cost CSV file
+     * @param {*} uploadFileName 
+     * @param {*} fileStorageAdapter 
+     */
     async generateCostFileUploadEndpoint(uploadFileName, fileStorageAdapter) {
         authorizeCostsAdmin(this.userPerms);
 
         return await fileStorageAdapter.generateCostsFileUploadUrl(uploadFileName);
     }
 
+    /**
+     * Responds to a cost CSV file being successfully uploaded by the client
+     * @param {*} filepath 
+     * @param {*} fileStorageAdapter 
+     * @param {*} dataSourceAdapter 
+     */
     async costsFileUploaded(filepath, fileStorageAdapter, dataSourceAdapter) {
         console.info(`processing costs CSV file at ${filepath}`);
 
@@ -25,6 +36,10 @@ exports.CostData = class {
         await dataSourceAdapter.replaceCostData(normalizedCosts);
     }
 
+    /**
+     * Converts the data in the costs CSV file into a normalized form
+     * @param {*} stream 
+     */
     async normalizeCostsFile(stream) {
         stream = stream.pipe(csv.parse({ headers: true, trim: true }));
 

@@ -1,5 +1,3 @@
-// Create clients and set shared const values outside of the handler.
-
 // Get the DynamoDB table name from environment variables
 const costsTableName = process.env.COSTS_TABLE;
 
@@ -8,21 +6,22 @@ const dataSourceAdapter = require('../../adapters/data-source.adapter.js');
 const { expectHttpGet, extractUserPermissions, okResponse, errorResponse } = require('./security/gateway.js');
 
 /**
- * 
+ * Invoked from API Gateway. Calculates the cost based on 3 parameters
  */
 exports.handler = async (event) => {
   expectHttpGet(event);
+  //expectNumber(event.pathParameters.monthlyTransactions); // TODO
 
-  // All log statements are written to CloudWatch
   console.info('received event:', event);
 
+  // Business objects contains the bulk of the application logic
   const business = new CalculateCost(extractUserPermissions(event));
   let response;
   try {
     const cost = await business.calculateCost(
       event.pathParameters.industry,
-      event.pathParameters.monthlyTransactions,
-      event.pathParameters.monthlyVolume,
+      Number(event.pathParameters.monthlyTransactions),
+      Number(event.pathParameters.monthlyVolume),
       new dataSourceAdapter.DynamoDbAdapter(costsTableName)
     );
     response = okResponse(cost);
@@ -30,7 +29,6 @@ exports.handler = async (event) => {
     response = errorResponse(e);
   }
 
-  // All log statements are written to CloudWatch
   console.info(`response from: ${event.path} statusCode: ${response.statusCode} body: ${response.body}`);
   return response;
 }

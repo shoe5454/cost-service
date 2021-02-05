@@ -11,12 +11,12 @@ exports.CalculateCost = class {
 
     /**
      * Implements the linear interpolation formula. Rounds the end result to 2 decimal points
-     * @param {*} x 
-     * @param {*} x1 
-     * @param {*} y1 
-     * @param {*} x2 
-     * @param {*} y2 
-     * @returns Result as a number rounded to 2 decimal places
+     * @param {*} x Number
+     * @param {*} x1 Number
+     * @param {*} y1 Number
+     * @param {*} x2 Number
+     * @param {*} y2 Number
+     * @returns Result as a Number rounded to 2 decimal places
      */
     linearInterpolation(x, x1, y1, x2, y2) {
         // Validate inputs
@@ -32,12 +32,15 @@ exports.CalculateCost = class {
     /**
      * Given a set of coordinates, interpolates the cost (y) for the reference point identified by x
      * @param {*} costCoordinates Associative array where key is "x" and the value is "y" (the cost)
-     * @param {*} x 
+     * @param {*} x Number
+     * @returns cost as a Number
      */
     interpolateCost(costCoordinates, x) {
+        //console.log(costCoordinates);
+        //console.log(x);
         // If x is an exact match in costCoordinates, return the y
         if (costCoordinates[x.toString()] !== undefined)
-            return costCoordinates[x.toString()];
+            return Number(costCoordinates[x.toString()]);
 
         // Find the surrounding keys within costCoordinates that are closest to x
         const keys = Object.keys(costCoordinates).map(key => parseInt(key));
@@ -56,15 +59,15 @@ exports.CalculateCost = class {
 
         // Interpolate
         //console.log(`${x} ${lowerKey} ${costCoordinates[lowerKey.toString()]} ${higherKey} ${costCoordinates[higherKey.toString()]}`);
-        return this.linearInterpolation(x, lowerKey, costCoordinates[lowerKey.toString()], higherKey, costCoordinates[higherKey.toString()]);
+        return this.linearInterpolation(x, lowerKey, Number(costCoordinates[lowerKey.toString()]), higherKey, Number(costCoordinates[higherKey.toString()]));
     }
 
     /**
      * Calculates the cost based on the data in industryCostData and for the given monthly average transaction and volume.
      * Rounds the result to 2 decimal places to prevent loss of precision
      * @param {*} industryCostData 
-     * @param {*} monthlyTransactions 
-     * @param {*} monthlyVolume 
+     * @param {*} monthlyTransactions Number
+     * @param {*} monthlyVolume Number
      * @returns Cost as a Number rounded to 2 decimal places
      */
     calculateCostFromIndustryCostData(industryCostData, monthlyTransactions, monthlyVolume) {
@@ -79,9 +82,9 @@ exports.CalculateCost = class {
 
     /**
      * Obtain cost data from data source and calculate the cost based on industry, monthly transactions, monthly volume
-     * @param {*} industry 
-     * @param {*} monthlyTransactions 
-     * @param {*} monthlyVolume 
+     * @param {*} industry string
+     * @param {*} monthlyTransactions Number
+     * @param {*} monthlyVolume Number
      * @param {*} dataSourceAdapter 
      */
     async calculateCost(industry, monthlyTransactions, monthlyVolume, dataSourceAdapter) {

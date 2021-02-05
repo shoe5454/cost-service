@@ -60,7 +60,7 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /costs/{industry}/{monthly_transactions}/{monthly_volume}
+            Path: /costs/{industry}/{monthlyTransactions}/{monthlyVolume}
             Method: GET
             RestApiId: !Ref RestApi
 

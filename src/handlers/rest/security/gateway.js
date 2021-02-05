@@ -3,6 +3,8 @@ const { NotFoundError } = require("../../../errors/not-found.error");
 const { ValidationError } = require("../../../errors/validation.error");
 const { MethodNotAllowedError } = require("../../../errors/method-not-allowed.error");
 
+// Various functions related to interfacing with the API Gateway
+
 exports.extractUserPermissions = (event) => {
     return event.requestContext.authorizer.claims['cognito:groups'];
 }
@@ -42,7 +44,7 @@ exports.errorResponse = (error) => {
         body = null;
     } else if (error instanceof ValidationError) {
         statusCode = 422;
-        body = null;
+        body = error.message;
     } else {
         statusCode = 500;
         body = null;
