@@ -19,18 +19,20 @@ describe('Test handler', () => {
     // This test invokes handler() and compare the result  
     it('should calculate cost', async () => {
         const item = {
-            TERMINAL: 50.00,
-            TRANSACTION_COUNT: {
-                100: 10.00,
-                5000: 5.00,
-                25000: 0.00,
-                1000000: 0.00,
-            },
-            TRANSACTION_VOLUME: {
-                5000: 20.00,
-                10000: 10.00,
-                100000: 0.00,
-                10000000: 0.00,
+            costData: {
+                TERMINAL: 50.00,
+                TRANSACTION_COUNT: {
+                    100: 10.00,
+                    5000: 5.00,
+                    25000: 0.00,
+                    1000000: 0.00,
+                },
+                TRANSACTION_VOLUME: {
+                    5000: 20.00,
+                    10000: 10.00,
+                    100000: 0.00,
+                    10000000: 0.00,
+                }
             }
         };
 

@@ -16,20 +16,22 @@ describe('Test CostData', () => {
         //console.log(result);
 
         // Verify TERMINAL prices
-        expect(result['Bars/Taverns/Night Clubs'].TERMINAL).toBe('60.00');
-        expect(result['Others'].TERMINAL).toBe('50.00');
-        expect(result['Bakeries'].TERMINAL).toBe('50.00');
-        expect(result['Charitable and Social Service Organizations'].TERMINAL).toBe('25.00');
+        expect(result['Bars/Taverns/Night Clubs'].TERMINAL).toBe(60.00);
+        expect(result['Others'].TERMINAL).toBe(50.00);
+        expect(result['Bakeries'].TERMINAL).toBe(50.00);
+        expect(result['Charitable and Social Service Organizations'].TERMINAL).toBe(25.00);
 
         // Verify a sample of the TRANSACTION_VOLUME prices
-        expect(result['Bars/Taverns/Night Clubs'].TRANSACTION_VOLUME['5000']).toBe('20.00');
+        expect(result['Bars/Taverns/Night Clubs'].TRANSACTION_VOLUME['5000']).toBe(20.00);
 
         // Verify a sample of the TRANSACTION_COUNT prices
-        expect(result['Bars/Taverns/Night Clubs'].TRANSACTION_COUNT['10']).toBe('10.00');
-        expect(result['Others'].TRANSACTION_COUNT['100']).toBe('20.00');
+        expect(result['Bars/Taverns/Night Clubs'].TRANSACTION_COUNT['10']).toBe(10.00);
+        expect(result['Others'].TRANSACTION_COUNT['100']).toBe(20.00);
 
         // Verify number of TRANSACTION_VOLUME price points for Others industry
         expect(Object.keys(result['Others'].TRANSACTION_VOLUME).length).toBe(3);
     });
+
+    // TODO test permissions
 
 });

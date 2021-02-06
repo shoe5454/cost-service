@@ -23,7 +23,7 @@ exports.DynamoDbAdapter = class {
         };
         const data = await docClient.get(params).promise();
         if (!data.Item)
-            throw new NotFoundError();
+            throw new NotFoundError("No such industry");
         return data.Item.costData;
     }
 

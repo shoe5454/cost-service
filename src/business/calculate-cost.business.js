@@ -40,7 +40,7 @@ exports.CalculateCost = class {
         //console.log(x);
         // If x is an exact match in costCoordinates, return the y
         if (costCoordinates[x.toString()] !== undefined)
-            return Number(costCoordinates[x.toString()]);
+            return costCoordinates[x.toString()];
 
         // Find the surrounding keys within costCoordinates that are closest to x
         const keys = Object.keys(costCoordinates).map(key => parseInt(key));
@@ -59,7 +59,7 @@ exports.CalculateCost = class {
 
         // Interpolate
         //console.log(`${x} ${lowerKey} ${costCoordinates[lowerKey.toString()]} ${higherKey} ${costCoordinates[higherKey.toString()]}`);
-        return this.linearInterpolation(x, lowerKey, Number(costCoordinates[lowerKey.toString()]), higherKey, Number(costCoordinates[higherKey.toString()]));
+        return this.linearInterpolation(x, lowerKey, costCoordinates[lowerKey.toString()], higherKey, costCoordinates[higherKey.toString()]);
     }
 
     /**

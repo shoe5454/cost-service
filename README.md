@@ -1,14 +1,3 @@
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
@@ -25,6 +14,7 @@
       <a href="#about-the-project">About The Project</a>
       <ul>
         <li><a href="#built-with">Built With</a></li>
+        <li><a href="#architecture">Architecture</a></li>
       </ul>
     </li>
     <li>
@@ -32,13 +22,26 @@
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
         <li><a href="#setup">Setup</a></li>
+        <li><a href="#deploy-to-aws">Deploy To AWS</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
+    <li>
+      <a href="#usage">Usage</a>
+      <ul>
+        <li><a href="#uploading-csv-file">Uploading CSV File</a></li>
+        <li><a href="#calculating-cost">Calculating Cost</a></li>      
+        <li><a href="#logs">Logs</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#development">Development</a>
+      <ul>
+        <li><a href="#project-folder-structure">Project Folder Structure</a></li>
+        <li><a href="#running-locally">Running Locally</a></li>
+      </ul>
+    </li>
+    <li><a href="#known-limitations">Known Limitations</a></li>
     <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
     <li><a href="#acknowledgements">Acknowledgements</a></li>
   </ol>
 </details>
@@ -60,6 +63,10 @@ This is my response to the coding challenge posed by a certain company.
 * [Visual Studio Code](https://code.visualstudio.com)
 
 It is assumed the reader has knowledge of the above and is able to find his/her way around them.
+
+### Architecture
+
+Logical architecture diagram
 
 <!-- GETTING STARTED -->
 ## Getting Started
@@ -107,19 +114,38 @@ The project uses the AWS Serverless Application Model (SAM). Use the following s
    * To access the project frontend, point your browser to the URL shown in the CloudFormation/SAM output key `CloudFrontFrontendUrl`
 3. If this is not the first time deploying and you have made changes to the frontend code, invalidate the project's CloudFront web distribution.
    * You can identify the project's web distribution in CloudFront by searching for the stack name you chose when deploying the project. The stack name should appear in the distibution's Comment field.
-4. Create users for the sales representative and the administrator in AWS Cognito (https://console.aws.amazon.com/cognito).
+4. Create users for the sales representative and the administrator in [AWS Cognito](https://console.aws.amazon.com/cognito).
    * The project's Cognito user pool name is the  stack name you chose when deploying the project.
 5. Assign the created users to the relevant group in Cognito (`sales_rep` and `costs_admin`).
    * These groups should already exist in Cognito, they were created when the project was deployed.
    * Users assigned to the `sales_rep` group will have permission to calculate costs for new merchants.
    * Users assigned to the `costs_admin` group will have permission to calculate costs for new merchants as well as upload CSVs to replace existing cost data.
-6. Log in as the user belonging to the `costs_admin` group and upload the example CSV located in `<PROJECT_DIR>/__tests__/unit/business/cost-data-example.csv` . To log in, point your web browser to the URL shown in the CloudFormation/SAM output key `CloudFrontFrontendUrl`.
+6. Upload a CSV file. See [Uploading CSV File](#uploading-csv-file).
 
-## Architecture
+## Usage
 
-Logical architecture diagram
+### Uploading CSV File
 
-## Project Folder Structure
+1. Log in as the user belonging to the `costs_admin` group.
+   * To log in, point your web browser to the URL shown in the CloudFormation/SAM output key `CloudFrontFrontendUrl`.
+2. You should see an _Upload costs CSV_ section. Choose a file containing cost data then press the Upload button.
+   * For a sample CSV file see `<PROJECT_DIR>/__tests__/unit/business/cost-data-example.csv` . 
+
+Any files uploaded will remove all existing cost data from the service and replace with the new information from the uploaded CSV file. You will be notified when the upload completes. However, there is currently no frontend feedback provided as to whether the CSV file was successfully processed after uploading. You will have to use the [Logs](#logs) to view the status of the processing.
+
+### Calculating Cost
+
+To calculate the cost for a new merchant, log in as a user belonging to either the `costs_admin` or `sales_rep` group. You should see a _Calculate cost_ form. All 3 fields are required. You'll need to type in the industry as an exact match (minus leading and trailing whitespace) to what was in the CSV.
+
+### Logs
+
+Logs are stored in [AWS CloudWatch](https://console.aws.amazon.com/cloudwatch/) under log groups. There are log groups for the 3 Lambdas: `calculateCostFunction`, `generateCostFileUploadEndpointFunction`, and `costsFileUploadedFunction`. There is also a log group for the nested stack (`FrontendSource`) that deploys the frontend code to S3.
+
+The `costsFileUploadedFunction` function is particularly useful to determine whether processing of a cost CSV file upload has completed successfully or not, because the processing is done asynchronously without any user feedback on the web page. After uploading the CSV file, there should be a log message saying `Cost data successfully replaced` . You may have to wait for a bit to see that message.
+
+## Development
+
+### Project Folder Structure
 
 ```sh
 /
@@ -150,16 +176,16 @@ Notable folders:
 * `/src/ui :` Content in this folder is deployed as static website resources on S3/CloudFront.
 * `/template.yml :` SAM template
 
-## Running Locally
+### Running Locally
 
-### Unit Tests
+#### Unit Tests
 
 From the Terminal panel in Visual Studio Code:
 ```sh
 npm run test
 ```
 
-### Integration Tests
+#### Integration Tests
 
 From the Terminal panel in Visual Studio Code:
 ```sh
@@ -168,7 +194,7 @@ npm run integ-test
 
 NOTE: Integration test is not yet working
 
-### Local Lambdas
+#### Local Lambdas
 
 Because the following command to start the local API server needs to run under sudo, you'll need to first run `aws configure` under sudo:
 ```sh
@@ -180,16 +206,12 @@ Then run:
 sudo sam local start-api
 ```
 
-<!-- USAGE EXAMPLES -->
-## Usage
-
-To calculate the cost for a new merchant, log in and use the `Calculate cost` form. All 3 fields are required. You'll need to type in the industry as an exact match (minus leading and trailing whitespace) to what was in the CSV.
-
 <!-- KNOWN LIMITATIONS -->
 ## Known Limitations
 
 1. CloudFront needs to be manually invalidated after deploying updated frontend code.
 2. No dropdown or select field for the industry in the _Calculate cost_ form.
+3. No user feedback provided as to whether the CSV upload is successfully processed or not.
 
 <!-- LICENSE -->
 ## License
@@ -208,10 +230,6 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=for-the-badge
-[issues-url]: https://github.com/othneildrew/Best-README-Template/issues
-[license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
-[license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
 [product-screenshot]: doc/images/screenshot.png
 
 

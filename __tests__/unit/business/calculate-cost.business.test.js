@@ -77,4 +77,27 @@ describe('Test CalculateCost', () => {
         // Compare the result with the expected result 
         expect(result).toBe(69.08);
     });
+
+    test('calculateCostFromIndustryCostData Others example', () => {
+        const industryCostData = {
+            TERMINAL: 50.00,
+            TRANSACTION_COUNT: {
+                100: 20.00,
+                25000: 0.00,
+                1000000: 0.00,
+            },
+            TRANSACTION_VOLUME: {
+                5000: 20.00,
+                100000: 0.00,
+                100000000: 0.00,
+            }
+        };
+
+        const result = target.calculateCostFromIndustryCostData(industryCostData, 1000, 10000.00);
+
+        // Compare the result with the expected result 
+        expect(result).toBe(88.23);
+    });
+
+    // TODO test permissions
 });

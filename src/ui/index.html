@@ -82,7 +82,7 @@
         /**
          * Calculate cost button clicked
          */
-        function calculateCost(e, form) {
+        async function calculateCost(e, form) {
             e.preventDefault();
 
             var token = auth.getSignInUserSession().getIdToken().getJwtToken();
@@ -172,10 +172,12 @@
 
         function extractResponseJson(response) {
             if (!response.ok) {
-                var msg = response.status;
-                if (response.statusText)
-                    msg += ': ' + response.statusText;
-                throw msg;
+                return response.text().then(text => {
+                    var msg = response.status;
+                    if (text)
+                        msg += ': ' + text;
+                    throw msg;
+                });
             }
             return response.json();
         }

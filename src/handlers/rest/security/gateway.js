@@ -38,7 +38,7 @@ exports.errorResponse = (error) => {
         body = null;
     } else if (error instanceof NotFoundError) {
         statusCode = 404;
-        body = null;
+        body = error.message;
     } else if (error instanceof MethodNotAllowedError) {
         statusCode = 405;
         body = null;

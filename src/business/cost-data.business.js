@@ -59,13 +59,13 @@ exports.CostData = class {
                 // Assign the row to the appropriate field in the normalized object
                 switch (row['Type']) {
                     case 'TERMINAL':
-                        normalizedIndustry['TERMINAL'] = row['Price'];
+                        normalizedIndustry['TERMINAL'] = Number(row['Price']);
                         break;
                     case 'TRANSACTION_COUNT':
-                        normalizedIndustry['TRANSACTION_COUNT'][row['Value']] = row['Price'];
+                        normalizedIndustry['TRANSACTION_COUNT'][row['Value']] = Number(row['Price']);
                         break;
                     case 'TRANSACTION_VOLUME':
-                        normalizedIndustry['TRANSACTION_VOLUME'][row['Value']] = row['Price'];
+                        normalizedIndustry['TRANSACTION_VOLUME'][row['Value']] = Number(row['Price']);
                         break;
                 }
             });
