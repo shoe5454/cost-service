@@ -40,7 +40,7 @@
         <li><a href="#running-locally">Running Locally</a></li>
       </ul>
     </li>
-    <li><a href="#known-limitations">Known Limitations</a></li>
+    <li><a href="#future-todos">Future TODOs</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#acknowledgements">Acknowledgements</a></li>
   </ol>
@@ -66,9 +66,8 @@ It is assumed the reader has knowledge of the above and is able to find his/her 
 
 ### Architecture
 
-Logical architecture diagram
+![Screen Shot][architecture-screenshot]
 
-<!-- GETTING STARTED -->
 ## Getting Started
 
 To build and deploy the project to AWS follow these steps.
@@ -77,12 +76,12 @@ To build and deploy the project to AWS follow these steps.
 
 * AWS account
   * Full access privileges with a valid access key ID and secret access key.
-  * Recommend using a new organization sub-account to make sure any resources created by this project can be guaranteed to be removed by deleting the account.
+  * Recommend using a new organization sub-account to make sure any resources created by this project can be guaranteed to be removed by deleting the account (i.e. stack deletion has not been tested).
 * Docker
   * Required by AWS SAM for local application testing.
   * Required by Visual Studio Code for running a remote development container.
 * Visual Studio Code
-  * This guide assumes you will be using Visual Studio Code. If using a different IDE, you'll need to install AWS SAM, AWS CLI, Python, Node in order to work with the project.
+  * This guide assumes you will be using Visual Studio Code. If using a different IDE, you'll need to install AWS SAM, AWS CLI, Python, and Node in order to work with the project.
 * Visual Studio Code Remote - Containers extension
   * This is the extension with id `ms-vscode-remote.remote-containers` .
 * Project source code
@@ -94,15 +93,16 @@ To build and deploy the project to AWS follow these steps.
 1. In Visual Studio Code, hit F1 then search for the `Remote-Containers: Open Folder in Container...` command.
 2. Browse for and select your `<PROJECT_DIR>` folder.
    * The Docker container for your development environment will be created. This may take a few minutes.
-4. Open the Terminal panel in Visual Studio Code. Run `aws configure` and follow the prompts.
+3. **For the rest of this guide, all commands are to be run from the Terminal panel in Visual Studio Code**, i.e. run inside the development Docker container.
+4. Run `aws configure` and follow the prompts.
    * Recommend using `us-east-1` as the default region because the project has not been tested with other regions.
-5. In the Terminal panel, run `npm install` . This is only required if you intend to run unit tests locally.
+5. Run `npm install` . This is only required if you intend to run unit tests locally or inspect dependency sources.
 
 ### Deploy To AWS
 
 The project uses the AWS Serverless Application Model (SAM). Use the following steps to deploy the project onto AWS.
 
-1. From the Terminal panel in Visual Studio Code, build the project.
+1. Build the project.
    ```sh
    sam build
    ```
@@ -149,7 +149,6 @@ The `costsFileUploadedFunction` function is particularly useful to determine whe
 
 ```sh
 /
-|
 |-__tests__/
   |-integration/
   |-unit/
@@ -167,10 +166,10 @@ The `costsFileUploadedFunction` function is particularly useful to determine whe
 ```
 
 Notable folders:
-* `/doc :` Documentation related files
-* `/events :` Sample events to use when running locally
+* `/doc :` Documentation related files other than this README
+* `/events :` Sample events to use when running locally (these are currently not yet tested)
 * `/src/adapters :` Adapters to external resources ala the _hexagonal/ports and adapters_ design pattern.
-* `/src/business :` The bulk of the 'application logic'. Also does user permissions testing
+* `/src/business :` The bulk of the 'application logic'. Also performs user permissions testing.
 * `/src/errors :` Custom errors
 * `/src/handlers :` Lambda handlers which invoke the business logic. Performs Lambda/transport specific tasks.
 * `/src/ui :` Content in this folder is deployed as static website resources on S3/CloudFront.
@@ -180,19 +179,17 @@ Notable folders:
 
 #### Unit Tests
 
-From the Terminal panel in Visual Studio Code:
 ```sh
 npm run test
 ```
 
 #### Integration Tests
 
-From the Terminal panel in Visual Studio Code:
 ```sh
 npm run integ-test
 ```
 
-NOTE: Integration test is not yet working
+NOTE: Integration test has not yet been updated from the sample code
 
 #### Local Lambdas
 
@@ -206,21 +203,40 @@ Then run:
 sudo sam local start-api
 ```
 
-<!-- KNOWN LIMITATIONS -->
-## Known Limitations
+## Future TODOs
 
-1. CloudFront needs to be manually invalidated after deploying updated frontend code.
-2. No dropdown or select field for the industry in the _Calculate cost_ form.
-3. No user feedback provided as to whether the CSV upload is successfully processed or not.
+1. CI/CD
+   * Currently, CloudFront needs to be manually invalidated after deploying updated frontend code.
+   * Improvements required for zero-downtime deployments.
+   * Deployment process for updates that include REST contract changes or schema changes?
+   * Deployment versioning
+   * Is there a better way to organize and coordinate the deployment of backend and frontend artifacts?
+2. Production monitoring
+   * Alarms, metrics.
+3. Security
+   * Client code is currently exposed to unauthenticated users.
+   * API rate limiting and/or API alarms to prevent/audit reverse engineering attempts of the cost algorithm.
+   * Verify the development Docker image is secure and not malicious.
+   * VPCs
+   * OAuth2/OIDC: Use PKCE instead of Implicit flow.
+4. Frontend
+   * Dropdown or select field for the industry in the _Calculate cost_ form.
+   * User feedback as to whether the CSV is successfully processed or not.
+   * Client-side error reporting.
+   * Better validation and error handling.
+5. Updating the cost data db is not atomic.
+6. No schema versioning.
+7. Business requirements
+   * Allow for scheduling of when new price data becomes effective?
+   * Ability to store and retrieve past quotes?
+8. Audit log.
 
-<!-- LICENSE -->
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
 
 
-<!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
 * [Visual Studio Code remote container setup](https://github.com/avdi/aws-sam)
 * [README template](https://github.com/othneildrew/Best-README-Template)
@@ -231,6 +247,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [product-screenshot]: doc/images/screenshot.png
+[architecture-screenshot]: doc/images/cost-service-architecture.png
 
 
 
