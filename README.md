@@ -213,12 +213,13 @@ sudo sam local start-api
    * Is there a better way to organize and coordinate the deployment of backend and frontend artifacts?
 2. Production monitoring
    * Alarms, metrics.
+   * Audit log.
 3. Security
    * Client code is currently exposed to unauthenticated users.
    * API rate limiting and/or API alarms to prevent/audit reverse engineering attempts of the cost algorithm.
    * Verify the development Docker image is secure and not malicious.
    * VPCs
-   * OAuth2/OIDC: Use PKCE instead of Implicit flow.
+   * OAuth2/OIDC: Use Authorization Code with PKCE instead of Implicit flow.
 4. Frontend
    * Dropdown or select field for the industry in the _Calculate cost_ form.
    * User feedback as to whether the CSV is successfully processed or not.
@@ -229,7 +230,6 @@ sudo sam local start-api
 7. Business requirements
    * Allow for scheduling of when new price data becomes effective?
    * Ability to store and retrieve past quotes?
-8. Audit log.
 
 ## License
 
